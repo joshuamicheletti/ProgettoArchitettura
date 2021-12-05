@@ -117,56 +117,142 @@
                                             ; in memoria contenente i dati da rappresentare a terminale
 
 
-    j controllaStato
+    j controllaStato                        ; salta alla istruzione "controlla stato"        
 
-nuovaRiga: 
-    daddi r13, r13, -1  ;nuovaRiga
-    daddi r12, r0, 16
 
-    daddi r11, r11, 1
-    daddi r10, r0, 0
 
-controllaStato: 
-    lb r5, row0(r2) ;controllaStato
-    daddi r2, r2, 1
+                                            ; ----- CODICE PER LA RAPPRESENTAZIONE DELLA TAVOLA -----
 
-    bnez r5, vivo
-    j morto
+                                            ; consiste nello scorrere la tavola rappresentata da row0(r2)
+                                            ; incrementando il valore di r2 ad ogni ciclo, decrementando i
+                                            ; valori di r12 e r13 ad ogni nuova cella e riga rispettivamente
+                                            ; e incrementando i valori di r10 e r11 ad ogni nuova cella
+                                            ; e riga rispettivamente. Ogni cella viene controllata per
+                                            ; determinare se dovra essere disegnata con il colore r28 in
+                                            ; posizione (r10, r11) nel caso in cui sia viva ( row0(r2) == 1)
+                                            ; oppure se non dovrà essere disegnata nel caso in cui sia morta
+                                            ; ( row0(r2) == 0)
 
-morto: 
-    daddi r10, r10, 1 ;morto
-    daddi r12, r12, -1
+nuovaRiga:                                  ; codice per incrementare i registri contatore per passare alla riga successiva
+                                            ; nella tavola
 
-    bnez r12, controllaStato
-    bnez r13, nuovaRiga
+    daddi r13, r13, -1                      ; Inizio codice "nuovaRiga": decrementa il contatore della posizione
+                                            ; Y (righe)       
+    daddi r12, r0, 16                       ; resetta il contatore delle celle in ogni riga X (colonne)
 
-    daddi r2, r2, -256
+    daddi r11, r11, 1                       ; incrementa il registro con la coordinata Y del pixel da disegnare
+    daddi r10, r0, 0                        ; resetta il registro con la coordinata X del pixel da disegnare
 
-    daddi r12, r0, 16
+                                            ; i registri contatore vanno dal valore massimo al valore minimo,
+                                            ; i registri contenenti le coordinate si muovono in senso contrario
+
+
+controllaStato:                             ; codice per controllare lo stato della cella da rappresentare
+
+    lb r5, row0(r2)                         ; Inizio codice "controllaStato": leggi il valore della cella in memoria
+                                            ; nella posizione attuale (r2) e salva il valore in r5  
+
+    daddi r2, r2, 1                         ; incrementa il registro contenente la posizione in memoria della cella
+                                            ; corrente
+
+    bnez r5, vivo                           ; se la cella corrente non è 0 (viva), salta al codice "vivo"
+    j morto                                 ; altrimenti salta a morto (da ottimizzare, salto non necessario
+
+
+morto:                                      ; codice per gestire la rappresentazione di una cella morta
+                                            ; la cella essendo morta non necessita di rappresentazione, quindi
+                                            ; possiamo passare direttamente alla cella seguente
+
+    daddi r10, r10, 1                       ; Inizio codice "morto": incrementa il valore di X per la prossima
+                                            ; cella da rappresentare
+
+    daddi r12, r12, -1                      ; decrementa il registro contenente il contatore delle celle in una riga (X)
+
+    bnez r12, controllaStato                ; se siamo in una cella valida nella riga, ripeti il controllo per disegnare
+                                            ; la prossima cella
+
+    bnez r13, nuovaRiga                     ; altrimenti inzia a leggere la prossima riga della tavola
+    
+    daddi r2, r2, -256                      ; se abbiamo visitato tutta la tavola e non ci sono più righe da rappresentare
+                                            ; resetta il contatore della posizione in memoria al suo valore iniziale
+                                            ; (in questo caso il valore si sarà spostato di 256 posizioni (16x16))
+
+    daddi r12, r0, 16                       ; resetta il valore dei contatori per X e Y ai loro valori iniziali
     daddi r13, r0, 15
 
-    j calcolaVicini
+    j calcolaVicini                         ; salta al codice per calcolare i vicini di ogni cella "calcolaVicini"
 
-vivo: 
-    sw r28, 0(r31) ; vivo
-    sb r10, 5(r31) 
-    sb r11, 4(r31)
 
-    sd r29, (r30)
+vivo:                                       ; codice per gestire la rappresentazione di una cella viva
 
-    daddi r10, r10, 1
-    daddi r12, r12, -1
+    sw r28, 0(r31)                          ; Inizio codice "vivo": imposta il colore nella memoria DATA
+                                            ; per disegnare il pixel con il colore definito in r28
 
-    bnez r12, controllaStato
-    bnez r13, nuovaRiga
+    sb r10, 5(r31)                          ; imposta la posizione X nella memoria DATA per disegnare
+                                            ; il pixel nella posizione definita in r10
 
-    daddi r2, r2, -256
+    sb r11, 4(r31)                          ; imposta la posizione Y nella memoria DATA per disegnare
+                                            ; il pixel nella posizione definita in r11
 
-    daddi r12, r0, 16
+    sd r29, (r30)                           ; carica il comando definito in r29 (5) nella memoria CONTROL
+                                            ; per chiamare la funzione di disegno
+
+    daddi r10, r10, 1                       ; incrementa il valore di X per la prossima cella da rappresentare
+
+    daddi r12, r12, -1                      ; decrementa il registro contenente il contatore delle celle in una riga (X)
+
+    bnez r12, controllaStato                ; se siamo in una cella valida nella riga, ripeti il controllo per disegnare
+                                            ; la prossima cella
+
+    bnez r13, nuovaRiga                     ; altrimenti inzia a leggere la prossima riga della tavola
+
+    daddi r2, r2, -256                      ; se abbiamo visitato tutta la tavola e non ci sono più righe da rappresentare
+                                            ; resetta il contatore della posizione in memoria al suo valore iniziale
+                                            ; (in questo caso il valore si sarà spostato di 256 posizioni (16x16))
+
+    daddi r12, r0, 16                       ; resetta il valore dei contatori per X e Y ai loro valori iniziali
     daddi r13, r0, 15
 
-    j calcolaVicini
+    j calcolaVicini                         ; salta al codice per calcolare i vicini di ogni cella "calcolaVicini"
 
+
+
+                                            ; ----- CODICE PER IL CALCOLO DEI VICINI DI UNA CELLA -----
+                                            
+                                            ; consiste nel verificare a quale caso appartiene ogni cella a
+                                            ; seconda delle sue coordinate X e Y, per eliminare casi limite
+                                            ; (celle ai bordi della tavola)
+                                            ;                           y
+                                            ;     | 7 | 6 | 6 | 6 | 5 | | r13=0    (765)   L algoritmo identifica 9 casi
+                                            ;     | 8 | 9 | 9 | 9 | 4 | |                  specifici, in ognuno di questi
+                                            ;     | 8 | 9 | 9 | 9 | 4 | | 15>r13>0 (489)   casi, il numero e la posizione
+                                            ;     | 8 | 9 | 9 | 9 | 4 | |                  dei vicini da prendere in
+                                            ;     | 1 | 2 | 2 | 2 | 3 | v r13= 15  (123)   considerazione è diverso
+                                            ; x <------------------------
+                                            ;   r12=16 | 16>r12>1 | r12=1
+                                            ;    (187)     (269)    (345)
+                                            ;
+                                            ; il codice controlla prima se la cella presa in considerazione
+                                            ; faccia parte di una configurazione in funzione prima di X e poi
+                                            ; di Y. Dipendentemente dai valori di X e Y, si risolve il calcolo dei
+                                            ; vicini in modo differente:
+                                            ; nel caso 1, la cella avra 3 vicini,
+                                            ; nel caso 2, la cella avra 5 vicini,
+                                            ; nel caso 9, la cella avra 8 vicini,
+                                            ;
+                                            ; nel caso 3, la cella avra 3 vicini come il caso 1, 7 e 5, ma saranno in posizioni
+                                            ; diverse dagli altri casi
+                                            ;
+                                            ; una volta stabiliti quali vicini bisogna prendere in considerazione, il codice
+                                            ; visita i vicini della cella applicando un offset all indirizzo della cella stessa
+                                            ;
+                                            ; | r2+15 | r2+16 | r2+17 |   se applicassimo un offset per muoverci nella
+                                            ; | r2-1  |   r2  | r2+1  |   tabella senza prendere in considerazione quali
+                                            ; | r2-17 | r2-16 | r2-15 |   vicini sono validi e quali no, andremmo fuori
+                                            ;                             dalla memoria della tabella
+                                            ;
+                                            ; in generale per saltare riga bisogna aggiungere +-16, e per muoversi di una cella
+                                            ; bisogna aggiungere +-1
 
 
 nuovaRigaVicini:
