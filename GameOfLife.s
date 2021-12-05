@@ -251,8 +251,8 @@ vivo:                                       ; codice per gestire la rappresentaz
                                             ; d | r2-17 | r2-16 | r2-15 |   vicini sono validi e quali no, andremmo fuori
                                             ;      sx              dx       dalla memoria della tabella
                                             ;
-                                            ; in generale per saltare riga bisogna aggiungere +-16, e per muoversi di una cella
-                                            ; bisogna aggiungere +-1
+                                            ; per spostarsi di una riga bisogna aggiungere +-16 (up, down), e per muoversi di una cella
+                                            ; sulla stessa riga bisogna aggiungere +-1 (sx, dx)
                                             ;
                                             ;           +16
                                             ;            ^
