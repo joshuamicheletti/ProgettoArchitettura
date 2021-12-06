@@ -2,7 +2,7 @@
     CONTROL:  .word32 0x10000
     DATA:     .word32 0x10008
 
-    color:    .byte 30, 144, 255, 0
+    colore:    .byte 30, 144, 255, 0
 
     # random board
     # tavola0:     .byte 1,0,1,0,0,0,0,1,0,1,0,1,1,1,0,1
@@ -102,7 +102,7 @@
 
     daddi r17, r0, 3                        ; r17 = numero di vicini necessari per far nascere una cella morta
 
-    lwu r28, color(r0)                      ; r28 = colore con cui disegnare
+    lwu r28, colore(r0)                     ; r28 = colore con cui disegnare
     daddi r29, r0, 5                        ; r29 = valore per determinare il funzionamento del
                                             ; terminale (5 = disegna terminale grafico)
 
@@ -133,6 +133,7 @@
                                             ; oppure se non dovrà essere disegnata nel caso in cui sia morta
                                             ; ( tavola0(r2) == 0)
 
+# non contiene dipendenze o stalli
 nuovaRiga:                                  ; codice per incrementare i registri contatore per passare alla riga successiva
                                             ; nella tavola
 
@@ -146,7 +147,9 @@ nuovaRiga:                                  ; codice per incrementare i registri
                                             ; i registri contatore vanno dal valore massimo al valore minimo,
                                             ; i registri contenenti le coordinate si muovono in senso contrario
 
-
+# contiene:
+# 1 dipendenza RAW
+# 1 stallo per salto
 controllaStato:                             ; codice per controllare lo stato della cella da rappresentare
 
     lb r5, tavola0(r2)                      ; Inizio codice "controllaStato": leggi il valore della cella in memoria
@@ -154,23 +157,33 @@ controllaStato:                             ; codice per controllare lo stato de
 
     daddi r2, r2, 1                         ; incrementa il registro contenente la posizione in memoria della cella
                                             ; corrente
-
+    # dipendenza RAW in r5
+    # stallo per salto
     bnez r5, vivo                           ; se la cella corrente non è 0 (viva), salta al codice "vivo"
-    j morto                                 ; altrimenti salta a morto (da ottimizzare, salto non necessario
+
+                                            ; altrimenti salta a morto
+    # salto non necessario (fixed)
+    # j morto                                 
 
 
 morto:                                      ; codice per gestire la rappresentazione di una cella morta
                                             ; la cella essendo morta non necessita di rappresentazione, quindi
                                             ; possiamo passare direttamente alla cella seguente
 
-    daddi r10, r10, 1                       ; Inizio codice "morto": incrementa il valore di X per la prossima
+    
+    # FIX dipendenza RAW con bnez r12, controllaStato
+    daddi r12, r12, -1                      ; Inizio codice "morto": decrementa il registro contenente il contatore delle celle in una riga (X)
+
+    daddi r10, r10, 1                       ; incrementa il valore di X per la prossima
                                             ; cella da rappresentare
 
-    daddi r12, r12, -1                      ; decrementa il registro contenente il contatore delle celle in una riga (X)
-
+    
+    # dipendenza RAW in r2 (fixed)
+    # stallo per salto
     bnez r12, controllaStato                ; se siamo in una cella valida nella riga, ripeti il controllo per disegnare
                                             ; la prossima cella
 
+    # stallo per salto
     bnez r13, nuovaRiga                     ; altrimenti inzia a leggere la prossima riga della tavola
     
     daddi r2, r2, -256                      ; se abbiamo visitato tutta la tavola e non ci sono più righe da rappresentare
@@ -196,14 +209,16 @@ vivo:                                       ; codice per gestire la rappresentaz
 
     sd r29, (r30)                           ; carica il comando definito in r29 (5) nella memoria CONTROL
                                             ; per chiamare la funzione di disegno
+    # FIX dipendenza RAW con bnez r12, controllaStato
+    daddi r12, r12, -1                      ; decrementa il registro contenente il contatore delle celle in una riga (X)
 
     daddi r10, r10, 1                       ; incrementa il valore di X per la prossima cella da rappresentare
 
-    daddi r12, r12, -1                      ; decrementa il registro contenente il contatore delle celle in una riga (X)
-
+    # dipendenza RAW in r2 (fixed)
+    # stallo per salto
     bnez r12, controllaStato                ; se siamo in una cella valida nella riga, ripeti il controllo per disegnare
                                             ; la prossima cella
-
+    # stallo per salto
     bnez r13, nuovaRiga                     ; altrimenti inzia a leggere la prossima riga della tavola
 
     daddi r2, r2, -256                      ; se abbiamo visitato tutta la tavola e non ci sono più righe da rappresentare
