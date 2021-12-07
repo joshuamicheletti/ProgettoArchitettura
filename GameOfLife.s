@@ -103,6 +103,8 @@
     daddi r16, r0, 16                       ; r16 = valore di limite superiore di x [1, 16] [r1, r16]
 
     daddi r17, r0, 3                        ; r17 = numero di vicini necessari per far nascere una cella morta
+                                            ; o per mantenere in vita una cella viva
+    daddi r18, r0, 2                        ; r18 = numero di vicini necessari per mantenere una cella in vita
 
     lwu r28, colore(r0)                     ; r28 = colore con cui disegnare
     daddi r29, r0, 5                        ; r29 = valore per determinare il funzionamento del
@@ -135,7 +137,7 @@
                                             ; oppure se non dovra essere disegnata nel caso in cui sia morta
                                             ; ( tavola0(r2) == 0)
 
-# non contiene dipendenze o stalli
+
 nuovaRiga:                                  ; codice per incrementare i registri contatore per passare alla riga successiva
                                             ; nella tavola
 
@@ -163,9 +165,7 @@ controllaStato:                             ; codice per controllare lo stato de
     # stallo per salto
     bnez r5, vivo                           ; se la cella corrente non è 0 (viva), salta al codice "vivo"
 
-                                            ; altrimenti salta a morto
-    # salto non necessario (fixed)
-    # j morto                                 
+                                            ; altrimenti salta a morto                         
 
 # contiene:
 # 3 stalli per salto
@@ -173,14 +173,10 @@ morto:                                      ; codice per gestire la rappresentaz
                                             ; la cella essendo morta non necessita di rappresentazione, quindi
                                             ; possiamo passare direttamente alla cella seguente
 
-    # FIX dipendenza RAW con bnez r12, controllaStato
     daddi r12, r12, -1                      ; Inizio codice "morto": decrementa il registro contenente il contatore delle celle in una riga (X)
 
     daddi r10, r10, 1                       ; incrementa il valore di X per la prossima
                                             ; cella da rappresentare
-
-    
-    # dipendenza RAW in r2 (fixed)
     # stallo per salto
     bnez r12, controllaStato                ; se siamo in una cella valida nella riga, ripeti il controllo per disegnare
                                             ; la prossima cella
@@ -205,20 +201,19 @@ vivo:                                       ; codice per gestire la rappresentaz
     sw r28, 0(r31)                          ; Inizio codice "vivo": imposta il colore nella memoria DATA
                                             ; per disegnare il pixel con il colore definito in r28
 
-    sb r10, 5(r31)                          ; imposta la posizione X nella memoria DATA per disegnare
+    sb r12, 5(r31)                          ; imposta la posizione X nella memoria DATA per disegnare
                                             ; il pixel nella posizione definita in r10
 
-    sb r11, 4(r31)                          ; imposta la posizione Y nella memoria DATA per disegnare
+    sb r13, 4(r31)                          ; imposta la posizione Y nella memoria DATA per disegnare
                                             ; il pixel nella posizione definita in r11
 
     sd r29, (r30)                           ; carica il comando definito in r29 (5) nella memoria CONTROL
                                             ; per chiamare la funzione di disegno
-    # FIX dipendenza RAW con bnez r12, controllaStato
+
     daddi r12, r12, -1                      ; decrementa il registro contenente il contatore delle celle in una riga (X)
 
     daddi r10, r10, 1                       ; incrementa il valore di X per la prossima cella da rappresentare
 
-    # dipendenza RAW in r2 (fixed)
     # stallo per salto
     bnez r12, controllaStato                ; se siamo in una cella valida nella riga, ripeti il controllo per disegnare
                                             ; la prossima cella
@@ -285,9 +280,9 @@ vivo:                                       ; codice per gestire la rappresentaz
                                             ; ad ogni visita, viene salvata la somma di tutti i vicini alla cella, cosi da
                                             ; ottenere il numero di vicini vivi alla cella corrente
 
-# non contiene stalli
+
 nuovaRigaVicini:                            ; codice per passare alla riga successiva nel calcolo dei vicini della tabella
-    # previene stallo RAW
+    
     daddi r12, r0, 16                       ; Inizio codice "nuovaRigaVicini": resetta il contatore X a 16 per iniziare a leggere la riga successiva dall inizio
 
     daddi r13, r13, -1                      ; decrementa il contatore Y per passare alla
@@ -372,7 +367,8 @@ calcolaVicini:                              ; codice per calcolare il numero di 
                                             ; salta al codice che contiene le regole per calcolare la prossima
                                             ; generazione
 
-
+# contiene:
+# 3 stalli per salto
 caso187:                                    ; codice per il calcolo dei vicini nel caso 187 (r12 = 16)
     # stallo per salto
     beq r13, r15, caso1                     ; Inizio codice "caso187": controlla se siamo nel caso 1 (r13 = 15)
@@ -380,27 +376,6 @@ caso187:                                    ; codice per il calcolo dei vicini n
     beq r13, r0, caso7                      ; controlla se siamo nel caso 7 (r13 = 0)
 
                                             ; caso 8 (r12 = 16, 0 < r13 < 15)
-
-    # daddi r4, r2, -16                       ; d
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, -15                       ; ddx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 1                         ; dx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 17                        ; udx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 16                        ; u
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
 
     daddi r4, r2, -16                       ; indirizzo del vicino d
 
@@ -438,7 +413,8 @@ caso187:                                    ; codice per il calcolo dei vicini n
                                             ; salta al codice che contiene le regole per calcolare la prossima
                                             ; generazione
 
-
+# contiene:
+# 3 stalli per salto
 caso345:                                    ; codice per il calcolo dei vicini nel caso 345 (r12 = 1)
     # stallo per salto
     beq r13, r15, caso3                     ; Inizio codice "caso345": controlla se siamo nel caso 3 (r13 = 15)
@@ -446,26 +422,6 @@ caso345:                                    ; codice per il calcolo dei vicini n
     beq r13, r0, caso5                      ; controlla se siamo nel caso 5 (r13 = 0)
 
                                             ; caso 4 (r12 = 1, 0 < r13 < 15)
-
-    # daddi r4, r2, -17                       ; dsx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, -16                       ; d
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 16                        ; u
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 15                        ; usx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, -1                        ; sx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
 
     daddi r4, r2, -17                       ; indirizzo del vicino dsx
 
@@ -502,7 +458,8 @@ caso345:                                    ; codice per il calcolo dei vicini n
                                             ; salta al codice che contiene le regole per calcolare la prossima
                                             ; generazione
 
-
+# contiene:
+# 3 stalli per salto
 caso123:                                    ; codice per il calcolo dei vicini nel caso 123 (r13 = 15)
     # stallo per salto
     beq r12, r16, caso1                     ; Inizio codice "caso123": controlla se siamo nel caso 1 (r12 = 16)
@@ -510,35 +467,6 @@ caso123:                                    ; codice per il calcolo dei vicini n
     beq r12, r1, caso3                      ; controlla se siamo nel caso 3 (r12 = 1)
 
                                             ; caso 2 (1 < r12 < 16, r13 = 15)
-
-    # daddi r4, r2, 1                         ; dx
-    # lb r5, tavola0(r4)
-    # # dipendenza RAW in r5
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 17                        ; udx
-    # lb r5, tavola0(r4)
-    # # dipendenza RAW in r5
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 16                        ; u
-    # lb r5, tavola0(r4)
-    # # dipendenza RAW in r5
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 15                        ; usx
-    # lb r5, tavola0(r4)
-    # # dipendenza RAW in r5
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, -1                        ; sx
-    # lb r5, tavola0(r4)
-    # # dipendenza RAW in r5
-    # dadd r6, r6, r5
-
-    # 5 dipendenze RAW in r5
-
-    # REGISTER RENAMING
 
     daddi r4, r2, 1                         ; indirizzo del vicino dx
 
@@ -571,13 +499,13 @@ caso123:                                    ; codice per il calcolo dei vicini n
     dadd r6, r6, r5                         ; somma il valore dei vicini e salvalo in r6
 
 
-
     # stallo per salto
     j regole                                ; una volta calcolato il numero di vicini vivi alla cella corrente
                                             ; salta al codice che contiene le regole per calcolare la prossima
                                             ; generazione
 
-
+# contiene:
+# 3 stalli per salto
 caso765:                                    ; codice per il calcolo dei vicini nel caso 765 (r13 = 0)
     # stallo per salto
     beq r12, r16, caso5                     ; Inizio codice "caso765": controlla se siamo nel caso 5 (r12 = 16)
@@ -585,27 +513,6 @@ caso765:                                    ; codice per il calcolo dei vicini n
     beq r12, r1, caso7                      ; controlla se siamo nel caso 7 (r12 = 1)
 
                                             ; caso 6 (1 < r12 < 16, r13 = 0)
-
-    # daddi r4, r2, -17                       ; dsx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, -16                       ; d
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, -15                       ; ddx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 1                         ; dx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, -1                        ; sx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
 
     daddi r4, r2, -17                       ; indirizzo del vicino dsx
 
@@ -643,21 +550,9 @@ caso765:                                    ; codice per il calcolo dei vicini n
                                             ; salta al codice che contiene le regole per calcolare la prossima
                                             ; generazione
 
-
+# contiene:
+# 1 stallo per salto
 caso5:                                      ; codice per il calcolo dei vicini nel caso 5 (r12 = 1, r13 = 0)
-
-    # daddi r4, r2, -17                       ; Inizio codice "caso5": dsx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-    
-    # daddi r4, r2, -16                       ; d
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, -1                        ; sx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
 
     daddi r4, r2, -17                       ; Inizio codice "caso5": indirizzo del vicino dsx
 
@@ -682,20 +577,9 @@ caso5:                                      ; codice per il calcolo dei vicini n
                                             ; salta al codice che contiene le regole per calcolare la prossima
                                             ; generazione
 
-
+# contiene:
+# 1 stallo per salto
 caso3:                                      ; codice per il calcolo dei vicini nel caso 3 (r12 = 1, r13 = 15)
-
-    # daddi r4, r2, 16                        ; Inizio codice "caso3": u
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 15                        ; usx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, -1                        ; sx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
 
     daddi r4, r2, 16                        ; Inizio codice "caso3": indirizzo del vicino u
 
@@ -715,28 +599,14 @@ caso3:                                      ; codice per il calcolo dei vicini n
 
     dadd r6, r6, r5                         ; somma il valore dei vicini e salvalo in r6
 
-
-
     # stallo per salto
     j regole                                ; una volta calcolato il numero di vicini vivi alla cella corrente
                                             ; salta al codice che contiene le regole per calcolare la prossima
                                             ; generazione
 
-
+# contiene:
+# 1 stallo per salto
 caso7:                                      ; codice per il calcolo dei vicini nel caso 7 (r12 = 16, r13 = 0)
-
-    # daddi r4, r2, -16                       ; Inizio codice "caso7": d
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, -15                       ; ddx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 1                         ; dx
-    # lb r5, tavola0(r4)
-    # dadd r6, r6, r5
-
 
     daddi r4, r2, -16                       ; Inizio codice "caso7": indirizzo del vicino d
 
@@ -761,29 +631,7 @@ caso7:                                      ; codice per il calcolo dei vicini n
                                             ; salta al codice che contiene le regole per calcolare la prossima
                                             ; generazione
 
-# contiene:
-# 1 stallo per salto
 caso1:                                      ; codice per il calcolo dei vicini nel caso 1 (r12 = 16, r13 = 15)
-
-    # daddi r4, r2, 1                         ; Inizio codice "caso1": dx
-    # # NO dipendenza in r4?
-    # lb r5, tavola0(r4)
-    # # dipendenza RAW in r5
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 17                        ; udx
-    # lb r5, tavola0(r4)
-    # # dipendenza RAW in r5
-    # dadd r6, r6, r5
-
-    # daddi r4, r2, 16                        ; u
-    # lb r5, tavola0(r4)
-    # # dipendenza RAW in r5
-    # dadd r6, r6, r5
-
-    # 3 dipendenze RAW
-
-    # REGISTER RENAMING
 
     daddi r4, r2, 1                         ; Inizio codice "caso1": indirizzo del vicino dx
 
@@ -803,10 +651,7 @@ caso1:                                      ; codice per il calcolo dei vicini n
 
     dadd r6, r6, r5                         ; somma il valore dei vicini e salvalo in r6
 
-    # nessuna dipendenza
-
-    # stallo per salto
-    j regole                                ; una volta calcolato il numero di vicini vivi alla cella corrente
+                                            ; una volta calcolato il numero di vicini vivi alla cella corrente
                                             ; salta al codice che contiene le regole per calcolare la prossima
                                             ; generazione (non necessario)
 
@@ -855,55 +700,52 @@ caso1:                                      ; codice per il calcolo dei vicini n
                                             ;  r6 = 3 (oppure 2)            r6 = 1 (<2)             r6 = 7 (>3)
 
 
+
+# contiene:
+# 2 dipendenze RAW
+# 1 stallo per salto
 regole:                                     ; codice per calcolare la generazione successiva tramite le regole del gioco
                                             ; della vita
-
+    # dipendenza RAW (2 stalli) in r5 con istruzione precedente (solo in casi != 9)
     lb r5, tavola0(r2)                      ; Inizio codice "regole": carica il valore della cella corrente in r5
     
+    # dipendenza RAW (2 stalli) in r5 con istruzione precedente (solo in casi == 9)
     beqz r5, regoleMorto                    ; se la cella corrente contiene 0 (morta, r5 = 0), passa alle regole nel caso
                                             ; di una cella morta
 
                                             ; cella corrente contiene 1 (viva, r5 = 1)
+                                            
+    beq r6, r17, vivi                       ; se la cella ha 3 vicini vivi, allora sopravvive
 
-    beqz r6, muori                          ; se la cella corrente ha 0 vicini, la cella muore di solitudine
+    beq r6, r18, vivi                       ; se la cella ha 2 vicini vivi, allora sopravvive
 
-    daddi r6, r6, -1                        ; decrementa il numero di r6 per contare i vicini (vicini = 1)
+    sb r0, tavola0(r3)                      ; altrimenti muore
 
-    beqz r6, muori                          ; se la cella ha 1 vicino, la cella muore di solitudine
 
-    daddi r6, r6, -1                        ; decrementa il numero di r6 per contare i vicini (vicini = 2)
-
-    beqz r6, vivi                           ; se la cella ha 2 vicini, la cella sopravvive
-
-    daddi r6, r6, -1                        ; decrementa il numero di r6 per contare i vicini (vicini = 3)
-
-    beqz r6, vivi                           ; se la cella ha 3 vicini, la cella sopravvive
-
-    sb r0, tavola0(r3)                      ; se la cella ha piu di 3 vicini, la cella muore
-                                            ; salva il valore 0 nella cella corrispondente nella tavola alternativa
-                                            ; indicata da r3 (generazione seguente)
-
+    # stallo per salto
     j aggiorna                              ; passa al codice per aggiornare la cella corrente e ripetere il procedimento
                                             ; sulla prossima cella
 
-
+# contiene:
+# 2 stalli per salto
 regoleMorto:                                ; codice per calcolare la generazione successiva nel caso di una cella morta
-
+    # stallo per salto
     beq r6, r17, vivi                       ; Inizio codice "regoleMorto": se la cella corrente ha 3 vicini (r6 = r17), la
                                             ; cella nasce
 
     sb r0, tavola0(r3)                      ; altrimenti la cella rimane morta, e si salva 0 nella cella corrispondente
                                             ; nella tavola alternativa indicata da r3 (generazione seguente)
-
+    # stallo per salto
     j aggiorna                              ; passa al codice per aggiornare la cella corrente e ripetere il procedimento
                                             ; sulla prossima cella
 
-
+# contiene:
+# 1 stallo per salto
 vivi:                                       ; codice per aggiornare la generazione successiva in caso di nascita / vita
 
     sb r1, tavola0(r3)                      ; Inizio codice "vivi": salva il valore 1 nella cella corrente nella tabella
                                             ; alternativa (generazione seguente)
-
+    # stallo per salto
     j aggiorna                              ; passa al codice per aggiornare la cella corrente e ripetere il procedimento
                                             ; sulla prossima cella
 
@@ -913,28 +755,29 @@ muori:                                      ; codice per aggiornare la generazio
     sb r0, tavola0(r3)                      ; Inizio codice "muori": salva il valore 0 nella cella corrente nella tabella
                                             ; alternativa (generazione seguente)
 
-    j aggiorna                              ; passa al codice per aggiornare la cella corrente e ripetere il procedimento
-                                            ; sulla prossima cella (NON NECESSARIO)
+                                            ; passa al codice per aggiornare la cella corrente e ripetere il procedimento
+                                            ; sulla prossima cella
 
-
+# contiene:
+# 2 stalli per salto
 aggiorna:                                   ; codice per passare alla cella successiva nella tabella, e per passare alla
                                             ; generazione successiva
 
     daddi r6, r0, 0                         ; Inizio codice "aggiorna": resetta il valore di r6 per il successivo calcolo
                                             ; dei vicini
 
+    daddi r12, r12, -1                      ; decrementa il contatore X per tenere conto della posizione nella tavola
+
     daddi r2, r2, 1                         ; incrementa l indirizzo in memoria della cella corrente per accedere alla cella
                                             ; successiva
 
     daddi r3, r3, 1                         ; incrementa l indirizzo in memoria della cella corrente nella tavola alternativa
                                             ; per salvare il risultato nella cella successiva per la generazione seguente
-
-    daddi r12, r12, -1                      ; decrementa il contatore X per tenere conto della posizione nella tavola
-
+    # stallo per salto
     bnez r12, calcolaVicini                 ; controlla se r12 > 0, ovvero se siamo ancora in una posizione valida dentro
                                             ; alla riga corrente, se la cella corrente e valida, ripeti il calcolo della
                                             ; generazione successiva
-
+    # stallo per salto
     bnez r13, nuovaRigaVicini               ; controlla se r13 > 0, ovvero se siamo in una posizione valida dentro la tavola
                                             ; se la riga corrente e valida, si passa alla riga successiva
 
@@ -966,7 +809,7 @@ aggiorna:                                   ; codice per passare alla cella succ
 
     daddi r3, r3, -256                      ; r3 = r3 - 256 (ci siamo spostati di 256 posizioni da r3 (16x16))
 
-    j scambiaTavola                         ; scambia gli indirizzi in memoria di r2 e r3, cosi da scambiare le posizioni
+                                            ; scambia gli indirizzi in memoria di r2 e r3, cosi da scambiare le posizioni
                                             ; della tavola corrente con la tavola alternativa, trasformando la generazione successiva
                                             ; in generazione corrente, e usando la area di memoria della generazione passata
                                             ; per salvare la nuova generazione successiva
@@ -984,7 +827,8 @@ aggiorna:                                   ; codice per passare alla cella succ
                                             ;
                                             ; r2 e r3 distano 256 spazi di memoria, 
 
-
+# contiene:
+# 1 stallo per salto
 scambiaTavola:                              ; codice per scambiare le tavole
 
     dadd r7, r0, r2                         ; Inizio codice "scambiaTavola": salva l indirizzo contenuto nel registro r2 in r7
@@ -993,4 +837,5 @@ scambiaTavola:                              ; codice per scambiare le tavole
 
     dadd r3, r0, r7                         ; r3 prende il valore di r7 (area di memoria per la generazione successiva)
 
+    # stallo per salto
     j controllaStato                        ; passa alla istruzione per disegnare la generazione corrente
