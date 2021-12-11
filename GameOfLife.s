@@ -2,7 +2,7 @@
     CONTROL:  .word32 0x10000
     DATA:     .word32 0x10008
 
-    colore:    .byte 30, 144, 255, 0
+    colore:   .byte 30, 144, 255, 0
 
     # random board
     # tavola0:     .byte 1,0,1,0,0,0,0,1,0,1,0,1,1,1,0,1
@@ -91,7 +91,7 @@
 
                                             ; r7 = registro temporaneo per scambiare i valori di r2 e r3
 
-                                            ; r8 = registro temporaneo per register renaming per dipendenze in r5
+                                            ; r8 = registro temporaneo per register renaming per dipendenze in r9
                                             ; r9 = registro per salvare il valore del vicino
     
     daddi r12, r0, 16                       ; r12 = valore di iteratore per x (inizializzato a 16)
@@ -171,7 +171,7 @@ vivo:                                       ; codice per gestire la rappresentaz
                                             ;     | 8 | 9 | 9 | 9 | 4 | |                  specifici, in ognuno di questi
                                             ;     | 8 | 9 | 9 | 9 | 4 | | 16>r13>1 (489)   casi, il numero e la posizione
                                             ;     | 8 | 9 | 9 | 9 | 4 | |                  dei vicini da prendere in
-                                            ;     | 1 | 2 | 2 | 2 | 3 | v r13= 16  (123)   considerazione è diverso
+                                            ;     | 1 | 2 | 2 | 2 | 3 | v r13=16   (123)   considerazione è diverso
                                             ; x <------------------------
                                             ;   r12=16 | 16>r12>1 | r12=1
                                             ;    (187)     (269)    (345)
@@ -216,10 +216,12 @@ calcolaVicini:                              ; codice per calcolare il numero di 
     beq r12, r16, caso187                   ; Inizio codice "calcolaVicini": controlla se siamo nel caso 187 (r12 = 16)
     # stallo per salto
     beq r12, r1, caso345                    ; controlla se siamo nel caso 345 (r12 = 1)
+
+                                            ; caso 269: 1 < r12 < 16
     # stallo per salto
-    beq r13, r16, caso123                   ; controlla se siamo nel caso 123 (r13 = 16)
+    beq r13, r16, caso2                     ; controlla se siamo nel caso 2 (r13 = 16)
     # stallo per salto
-    beq r13, r1, caso765                    ; controlla se siamo nel caso 765 (r13 = 1)
+    beq r13, r1, caso6                      ; controlla se siamo nel caso 6 (r13 = 1)
 
                                             ; se la cella corrente non appartiene a nessun caso specifico, allora siamo
                                             ; nel caso 9 (1<r12<16, 0<r13<16), in questo caso dobbiamo prendere in
@@ -378,16 +380,10 @@ caso345:                                    ; codice per il calcolo dei vicini n
                                             ; generazione
 
 # contiene:
-# 3 stalli per salto
-caso123:                                    ; codice per il calcolo dei vicini nel caso 123 (r13 = 16)
-    # stallo per salto
-    beq r12, r16, caso1                     ; Inizio codice "caso123": controlla se siamo nel caso 1 (r12 = 16)
-    # stallo per salto
-    beq r12, r1, caso3                      ; controlla se siamo nel caso 3 (r12 = 1)
+# 1 stallo per salto
+caso2:                                      ; codice per il calcolo dei vicini nel caso 2 (1 < r12 < 16, r13 = 16)
 
-                                            ; caso 2 (1 < r12 < 16, r13 = 16)
-
-    daddi r4, r2, 1                         ; indirizzo del vicino dx
+    daddi r4, r2, 1                         ; Inizio codice "caso2": indirizzo del vicino dx
 
     lb r9, tavola0(r4)                      ; carica il vicino in posizione dx in r9
 
@@ -424,16 +420,10 @@ caso123:                                    ; codice per il calcolo dei vicini n
                                             ; generazione
 
 # contiene:
-# 3 stalli per salto
-caso765:                                    ; codice per il calcolo dei vicini nel caso 765 (r13 = 0)
-    # stallo per salto
-    beq r12, r16, caso5                     ; Inizio codice "caso765": controlla se siamo nel caso 5 (r12 = 16)
-    # stallo per salto
-    beq r12, r1, caso7                      ; controlla se siamo nel caso 7 (r12 = 1)
+# 1 stallo per salto
+caso6:                                      ; codice per il calcolo dei vicini nel caso 6 (1 < r12 < 16, r13 = 1)
 
-                                            ; caso 6 (1 < r12 < 16, r13 = 0)
-
-    daddi r4, r2, -17                       ; indirizzo del vicino dsx
+    daddi r4, r2, -17                       ; Inizio codice "caso6": indirizzo del vicino dsx
 
     lb r9, tavola0(r4)                      ; carica il vicino in posizione dsx in r9
 
@@ -691,7 +681,7 @@ aggiorna:                                   ; codice per passare alla cella succ
                                             ; per salvare il risultato nella cella successiva per la generazione seguente
 
     # stallo per salto
-    bnez r12, controllaStato                 ; controlla se r12 > 0, ovvero se siamo ancora in una posizione valida dentro
+    bnez r12, controllaStato                ; controlla se r12 > 0, ovvero se siamo ancora in una posizione valida dentro
                                             ; alla riga corrente, se la cella corrente e valida, ripeti il calcolo della
                                             ; generazione successiva
 
@@ -700,7 +690,7 @@ aggiorna:                                   ; codice per passare alla cella succ
     daddi r12, r0, 16
     
     # stallo per salto
-    bnez r13, controllaStato               ; controlla se r13 > 0, ovvero se siamo in una posizione valida dentro la tavola
+    bnez r13, controllaStato                ; controlla se r13 > 0, ovvero se siamo in una posizione valida dentro la tavola
                                             ; se la riga corrente e valida, si passa alla riga successiva
 
                                             ; terminato il calcolo della generazione successiva
