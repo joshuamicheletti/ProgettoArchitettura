@@ -133,16 +133,13 @@
 
 
 # contiene:
-# 2 stalli per salti
+# 1 stallo per salto
 controllaStato:                             ; codice per controllare lo stato della cella da rappresentare
 
     # stallo per salto
     bnez r5, vivo                           ; Inizio codice "controllaStato":se la cella corrente non è 0 (viva),
                                             ; salta al codice "vivo"
 
-    # stallo per salto                                        
-    # j calcolaVicini                         ; altrimenti se la cella è morta, non dobbiamo fare niente e passiamo
-                                            ; al calcolo dei vicini
 
 
                                             ; ----- CODICE PER IL CALCOLO DEI VICINI DI UNA CELLA -----
@@ -265,19 +262,7 @@ calcolaVicini:                              ; codice per calcolare il numero di 
     dadd r6, r6, r9                         ; somma il valore dei vicini e salvalo in r6
 
     dadd r6, r6, r8                         ; somma il valore dei vicini e salvalo in r6
-
-
-    # stallo per salto
-    # j regole                                ; una volta calcolato il numero di vicini vivi alla cella corrente
-                                            ; salta al codice che contiene le regole per calcolare la prossima
-                                            ; generazione
-
-
-
-                                            ; una volta calcolato il numero di vicini vivi alla cella corrente
-                                            ; salta al codice che contiene le regole per calcolare la prossima
-                                            ; generazione (non necessario)
-
+    
 
 
                                             ; ----- CODICE PER IL CALCOLO DELLA GENERAZIONE SUCCESSIVA -----
@@ -322,42 +307,19 @@ calcolaVicini:                              ; codice per calcolare il numero di 
 
 
 # contiene:
-# 4 stalli per salti
+# 2 stalli per salti
 regole:                                     ; codice per calcolare la generazione successiva tramite le regole del gioco
                                             ; della vita
     # stallo per salto
-    beqz r5, regoleMorto                    ; Inizio codice "regole": se la cella corrente contiene 0 (morta, r5 = 0),
-                                            ; passa alle regole nel caso di una cella morta
+    bnez r5, regoleVivo                     ; Inizio codice "regole": se la cella corrente contiene 1 (viva, r5 = 1),
+                                            ; passa alle regole nel caso di una cella viva
 
-                                            ; cella corrente contiene 1 (viva, r5 = 1)
-    # stallo per salto                               
-    beq r6, r17, vivi                       ; se la cella ha 3 vicini vivi, allora sopravvive
+                                            ; regole per cella morta
     # stallo per salto
-    beq r6, r18, vivi                       ; se la cella ha 2 vicini vivi, allora sopravvive
+    beq r6, r17, vivi                       ; se la cella ha 3 vicini, allora la cella diventa viva
 
-    sb r0, tavola0(r3)                      ; altrimenti muore
+    sb r0, tavola0(r3)                      ; altrimenti rimane morta
 
-    # stallo per salto
-    j aggiorna                              ; passa al codice per aggiornare la cella corrente e ripetere il procedimento
-                                            ; sulla prossima cella
-
-
-vivi:                                       ; codice per aggiornare la generazione successiva in caso di nascita / vita
-
-    sb r1, tavola0(r3)                      ; Inizio codice "vivi": salva il valore 1 nella cella corrente nella tabella
-                                            ; alternativa (generazione seguente)
-    j aggiorna
-
-
-# contiene:
-# 1 stallo per salto
-regoleMorto:                                ; codice per calcolare la generazione successiva nel caso di una cella morta
-    # stallo per salto
-    beq r6, r17, vivi                       ; Inizio codice "regoleMorto": se la cella corrente ha 3 vicini (r6 = r17), la
-                                            ; cella nasce
-
-    sb r0, tavola0(r3)                      ; altrimenti la cella rimane morta, e si salva 0 nella cella corrispondente
-                                            ; nella tavola alternativa indicata da r3 (generazione seguente)
 
 
 # contiene:
@@ -383,9 +345,9 @@ aggiorna:                                   ; codice per passare alla cella succ
                                             ; alla riga corrente, se la cella corrente e valida, ripeti il calcolo della
                                             ; generazione successiva
 
-    daddi r13, r13, -1
+    daddi r13, r13, -1                      ; decrementa il contatore Y per tenere conto della riga nella tavola
 
-    daddi r12, r0, 16
+    daddi r12, r0, 16                       ; reimposta il contatore di X a 16
     
     # stallo per salto
     bnez r13, controllaStato                ; controlla se r13 > 0, ovvero se siamo in una posizione valida dentro la tavola
@@ -396,6 +358,7 @@ aggiorna:                                   ; codice per passare alla cella succ
                                             ; della tavola corrente con la tavola alternativa, trasformando la generazione successiva
                                             ; in generazione corrente, e usando la area di memoria della generazione passata
                                             ; per salvare la nuova generazione successiva
+
 
 
                                             ; ----- CODICE PER SCAMBIARE TAVOLE -----
@@ -437,11 +400,9 @@ scambiaTavola:                              ; codice per scambiare le tavole
     daddi r3, r3, -256                      ; r3 = r3 - 256 (ci siamo spostati di 256 posizioni da r3 (16x16))
 
 
-    dadd r7, r0, r2                         ;salva l indirizzo contenuto nel registro r2 in r7
+    dadd r7, r0, r2                         ; salva l indirizzo contenuto nel registro r2 in r7
 
     dadd r2, r0, r3                         ; il registro r2 prende il valore di r3 (nuova generazione diventa generazione corrente)
-
-    lb r5, tavola0(r2)
 
     dadd r3, r0, r7                         ; r3 prende il valore di r7 (area di memoria per la generazione successiva)
 
@@ -450,6 +411,10 @@ scambiaTavola:                              ; codice per scambiare le tavole
 
 
 
+                                            ; CODICE PER GESTIONE DI CASI MENO FAVOREVOLI
+
+# contiene:
+# 1 stallo per salto
 vivo:                                       ; codice per gestire la rappresentazione di una cella viva
 
     sw r28, 0(r31)                          ; Inizio codice "vivo": imposta il colore nella memoria DATA
@@ -463,9 +428,8 @@ vivo:                                       ; codice per gestire la rappresentaz
 
     sd r29, (r30)                           ; carica il comando definito in r29 (5) nella memoria CONTROL
                                             ; per chiamare la funzione di disegno
-
+    # stallo per salto
     j calcolaVicini
-
 
 
 
@@ -741,4 +705,33 @@ caso1:                                      ; codice per il calcolo dei vicini n
 
     dadd r6, r6, r9                         ; somma il valore dei vicini e salvalo in r6
 
-    j regole
+    j regole                                ; una volta calcolato il numero di vicini vivi alla cella corrente
+                                            ; salta al codice che contiene le regole per calcolare la prossima
+                                            ; generazione
+
+
+# contiene:
+# 1 stallo per salto
+vivi:                                       ; codice per aggiornare la generazione successiva in caso di nascita / vita
+
+    sb r1, tavola0(r3)                      ; Inizio codice "vivi": salva il valore 1 nella cella corrente nella tabella
+                                            ; alternativa (generazione seguente)
+    # stallo per salto
+    j aggiorna                              ; passa al codice per aggiornare la cella corrente e ripetere il procedimento
+                                            ; sulla prossima cella
+
+
+
+# contiene:
+# 3 stalli per salti
+regoleVivo:                                 ; codice per calcolare la generazione successiva nel caso di una cella morta
+    # stallo per salto
+    beq r6, r17, vivi                       ; Inizio codice "regoleVivo": se la cella ha 3 vicini vivi, allora sopravvive
+    # stallo per salto
+    beq r6, r18, vivi                       ; se la cella ha 2 vicini vivi, allora sopravvive
+
+    sb r0, tavola0(r3)                      ; altrimenti muore
+
+    # stallo per salto
+    j aggiorna                              ; passa al codice per aggiornare la cella corrente e ripetere il procedimento
+                                            ; sulla prossima cella
