@@ -10,3 +10,6 @@ Per andare avanti di generazione bisogna premere "Invio"
 
 
 Il programma è inizialmente caricato con una configurazione specifica della tavola, ma sono presenti tavole diverse commentate nel codice sorgente
+
+
+Tutte le fasi di ottimizzazione documentate nella relazione sono visibili nei commit di questa repository, denominati dal loro numero di fase di ottimizzazione
