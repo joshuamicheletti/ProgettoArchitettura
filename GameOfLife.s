@@ -4,7 +4,7 @@
 
     colore:   .byte 30, 144, 255, 0
 
-    # random board
+    # tavola casuale
     # tavola0:     .byte 1,0,1,0,0,0,0,1,0,1,0,1,1,1,0,1
     # tavola1:     .byte 1,0,0,1,0,0,1,1,0,0,0,0,0,0,1,0
     # tavola2:     .byte 1,1,1,0,1,1,1,1,0,0,0,0,1,1,0,0
@@ -22,7 +22,7 @@
     # tavola14:    .byte 0,1,1,0,1,0,1,1,0,0,1,0,0,1,0,0
     # tavola15:    .byte 0,1,0,1,0,0,0,0,1,0,0,1,1,1,1,1
 
-    # glider
+    # aliante
     # tavola0:     .byte 0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
     # tavola1:     .byte 0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0
     # tavola2:     .byte 1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -40,7 +40,7 @@
     # tavola14:    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
     # tavola15:    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
-    # fireworks
+    # fuochi d'artificio
     # tavola0:     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
     # tavola1:     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
     # tavola2:     .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -58,7 +58,7 @@
     # tavola14:    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
     # tavola15:    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
-    # alt glider
+    # astronave + aliante
     tavola0:     .byte 1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0
     tavola1:     .byte 0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
     tavola2:     .byte 1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
@@ -262,7 +262,7 @@ calcolaVicini:                              ; codice per calcolare il numero di 
     dadd r6, r6, r9                         ; somma il valore dei vicini e salvalo in r6
 
     dadd r6, r6, r8                         ; somma il valore dei vicini e salvalo in r6
-    
+
 
 
                                             ; ----- CODICE PER IL CALCOLO DELLA GENERAZIONE SUCCESSIVA -----
@@ -708,6 +708,7 @@ caso1:                                      ; codice per il calcolo dei vicini n
     j regole                                ; una volta calcolato il numero di vicini vivi alla cella corrente
                                             ; salta al codice che contiene le regole per calcolare la prossima
                                             ; generazione
+
 
 
 # contiene:
